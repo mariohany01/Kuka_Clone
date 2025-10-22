@@ -1,0 +1,71 @@
+-- Import the CoppeliaSim library to get access to its functions (API).
+-- This is required at the top of almost every CoppeliaSim script.
+sim=require'sim'
+
+-- This is a helper function to make our main code cleaner.
+-- It takes all the necessary parameters and packages them into a table (a Lua object)
+-- that the sim.moveToConfig function expects.
+function moveToConfig(handles,maxVel,maxAccel,maxJerk,targetConf)
+    -- 'params' is a table that holds all the arguments for the motion command.
+    local params = {
+        joints = handles,       -- A list of handles to the joints that should move.
+        targetPos = targetConf, -- A list of target angles (in radians) for each joint.
+        maxVel = maxVel,        -- The maximum velocity for each joint.
+        maxAccel = maxAccel,    -- The maximum acceleration for each joint.
+        maxJerk = maxJerk,      -- The maximum jerk (rate of change of acceleration) for each joint.
+    }
+    -- This is the core function that tells CoppeliaSim's motion planner
+    -- to calculate and execute a smooth path to the target configuration.
+    sim.moveToConfig(params)
+end
+
+-- This is the main function of a THREADED script.
+-- It runs in a loop in the background while the simulation is playing.
+function sysCall_thread()
+    
+    -- ==================== JOINT SETUP ====================
+    -- Here, we get the unique identifier (handle) for each joint in the robot.
+    -- We use the full, absolute path from the scene hierarchy to make sure we grab the correct object.
+    -- This is the most reliable way to get object handles.
+    local jointHandles = {
+        sim.getObject('/base_link_respondable/Joint_01'),
+        sim.getObject('/base_link_respondable/Link_01_respondable/Joint_02'),
+        sim.getObject('/base_link_respondable/Link_01_respondable/Link_02_respondable/Joint_03'),
+        sim.getObject('/base_link_respondable/Link_01_respondable/Link_02_respondable/Link_03_respondable/Joint_04'),
+        sim.getObject('/base_link_respondable/Link_01_respondable/Link_02_respondable/Link_03_respondable/Link_04_respondable/Joint_05'),
+        sim.getObject('/base_link_respondable/Link_01_respondable/Link_02_respondable/Link_03_respondable/Link_04_respondable/Link_05_respondable/Joint_06')
+    }
+    
+    -- ==================== MOVEMENT PARAMETERS ====================
+    -- Define the speed and acceleration limits in degrees per second/second^2.
+    local vel=120
+    local accel=40
+    local jerk=80
+    
+    -- The API functions require angles in RADIANS, not degrees.
+    -- We convert our desired values by multiplying by (pi / 180).
+    -- We create a table for each parameter, with one value for each of the 6 joints.
+    local maxVel={vel*math.pi/180,vel*math.pi/180,vel*math.pi/180,vel*math.pi/180,vel*math.pi/180,vel*math.pi/180}
+    local maxAccel={accel*math.pi/180,accel*math.pi/180,accel*math.pi/180,accel*math.pi/180,accel*math.pi/180,accel*math.pi/180}
+    local maxJerk={jerk*math.pi/180,jerk*math.pi/180,jerk*math.pi/180,jerk*math.pi/180,jerk*math.pi/180,jerk*math.pi/180}
+
+    -- ==================== DEFINE TARGET POSITIONS ====================
+    -- Define the joint configurations (poses) we want the robot to move to.
+    -- Each value is an angle in degrees, which we convert to radians on the fly.
+    -- The order of angles must match the order of the jointHandles.
+    local targetPos1={90*math.pi/180,90*math.pi/180,-90*math.pi/180,90*math.pi/180,90*math.pi/180,90*math.pi/180}
+    local targetPos2={-90*math.pi/180,45*math.pi/180,90*math.pi/180,135*math.pi/180,90*math.pi/180,90*math.pi/180}
+    local targetPos3={0,0,0,0,0,0} -- The "home" position with all joint angles at zero.
+
+    -- ==================== EXECUTE MOVEMENT SEQUENCE (THE PROBLEMATIC PART) ====================
+    -- These three commands are called one after another without any pause.
+    -- Each new command cancels the previous one.
+    -- This is why you only see the result of the LAST command.
+    moveToConfig(jointHandles,maxVel,maxAccel,maxJerk,targetPos1)
+    moveToConfig(jointHandles,maxVel,maxAccel,maxJerk,targetPos2)
+    moveToConfig(jointHandles,maxVel,maxAccel,maxJerk,targetPos3)
+    
+    -- After firing the last command, the threaded script will loop and do this all over again,
+    -- constantly telling the robot to go home.
+    -- TO FIX: Use one of the solutions above (sim.wait or callbacks).
+end

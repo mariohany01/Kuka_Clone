@@ -1,11 +1,11 @@
 clc; clear; close all;
-a1 = 133.35;
-d1 =37.5;
-d2 = 160;
-d3 = 14.84;
-a2 = 141.07;
-endeff = 0;
-width=50;
+    a1 = 135.3;
+    d1 =37.5;
+    d2 = 160;
+    d3 = 15;
+    a2 = 137.3;
+    endeff = 0;
+    width=50;
 %%
 %My robot
 % Link([theta, d, a, alpha])
@@ -26,9 +26,10 @@ L(6) = Link([0     endeff  0       0]);
 %L(6) = Link([0     -endeff  0       pi]);           
 
 Rob = SerialLink(L, 'name', 'RRRRR');
-q=[0 pi/2 0 0 0 0];
+q=[30*(pi / 180) 90*(pi / 180) 15*(pi / 180) -180*(pi / 180) 90*(pi / 180) 40*(pi / 180)];
 %q = [30*pi/180 90*pi/180 45*pi/180 60*pi/180 20*pi/180 90*pi/180]; %theta 2 keda da el zero bta3ha
 Rob.plot(q, 'workspace', [-400 400 -400 400 -1 500]);
 T = Rob.fkine(q); disp(T);
 % Sliders
 Rob.teach;
+
